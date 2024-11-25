@@ -1,5 +1,3 @@
-import sqlite3
-import time
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from webdriver_manager.chrome import ChromeDriverManager
@@ -9,12 +7,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from job_scraper.abstract_scraper import AbstractJobScraper
 from job_scraper.scraper_selectors.workday_selectors import WorkDaySelectors
 from job_scraper.utils import get_workday_post_time_range, get_workday_company_urls
 
 
-class WorkdayScraper:
+class WorkdayScraper(AbstractJobScraper):
     def __init__(self, db_path='job_listings.db', update_func=None, done_event=None, result_queue=None):
+        super().__init__(db_path)
         self.db_path = db_path
         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=self.get_selenium_configs())
         self.one_week_span_text = get_workday_post_time_range()
@@ -33,15 +33,6 @@ class WorkdayScraper:
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         return chrome_options
-
-    def save_to_database(self, original_text, original_html, source, external_id):
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
-        c.execute("INSERT OR IGNORE INTO job_listings (original_text, original_html, source, external_id) VALUES (?, ?, ?, ?)",
-                  (original_text, original_html, source, external_id))
-        conn.commit()
-        conn.close()
-        return c.rowcount > 0
 
     def save_new_job_listing(self, job_description, job_description_html, job_url, job_id):
         if not job_description:
@@ -73,7 +64,7 @@ class WorkdayScraper:
             self.result_queue.put(self.new_entries_count)
             self.done_event.set()
 
-    def scrape(self):
+    def scrape_jobs(self):
         self.update_func(f"Scraping Workday companies:\t{", ".join(self.company_urls.keys())}")
 
         for company_name, company_url in self.company_urls.items():

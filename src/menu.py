@@ -363,7 +363,7 @@ class MenuApp:
     def start_scraping_workday_with_status_updates(self):
         result_queue= Queue()
         self.scraper = WorkdayScraper(self.db_path, self.update_status_bar, self.scraping_done_event, result_queue)
-        scraping_thread = threading.Thread(target=self.scraper.scrape)
+        scraping_thread = threading.Thread(target=self.scraper.scrape_jobs)
         scraping_thread.start()
         self.scraping_done_event.wait()
         new_listings_count = result_queue.get()
